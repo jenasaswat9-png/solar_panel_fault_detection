@@ -1,0 +1,124 @@
+# Docker Compose Configuration for Solar Panel Fault Detection
+
+version: '3.8'
+
+services:
+  # ==========================================
+  # API Service
+  # ==========================================
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: production
+    image: solar-panel-fault-detection:api
+    container_name: solar-panel-api
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL_TYPE=resnet50
+      - MODEL_WEIGHTS=models/checkpoints/best_model.pth
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ../models:/app/models
+      - ../data:/app/data
+    networks:
+      - solar-panel-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ==========================================
+  # Dashboard Service
+  # ==========================================
+  dashboard:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: production
+    image: solar-panel-fault-detection:dashboard
+    container_name: solar-panel-dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      - MODEL_TYPE=resnet50
+      - MODEL_WEIGHTS=models/checkpoints/best_model.pth
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ../models:/app/models
+      - ../data:/app/data
+    networks:
+      - solar-panel-network
+    command: streamlit run dashboard/streamlit_app.py --server.port 8501 --server.address 0.0.0.0
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # ==========================================
+  # Training Service
+  # ==========================================
+  training:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: training
+    image: solar-panel-fault-detection:training
+    container_name: solar-panel-training
+    environment:
+      - MODEL_TYPE=yolo
+      - PYTHONUNBUFFERED=1
+      - WANDB_API_KEY=${WANDB_API_KEY}
+      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
+    volumes:
+      - ../:/app
+      - training-cache:/root/.cache
+    networks:
+      - solar-panel-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    profiles:
+      - training
+
+  # ==========================================
+  # Jupyter Notebook Service
+  # ==========================================
+  notebook:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: development
+    image: solar-panel-fault-detection:notebook
+    container_name: solar-panel-notebook
+    ports:
+      - "8888:8888"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ../:/app
+    networks:
+      - solar-panel-network
+    command: jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token=''
+    profiles:
+      - notebook
+
+# ==========================================
+# Networks
+# ==========================================
+networks:
+  solar-panel-network:
+    driver: bridge
+
+# ==========================================
+# Volumes
+# ==========================================
+volumes:
+  training-cache:
+    driver: local

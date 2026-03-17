@@ -1,0 +1,88 @@
+# Solar Panel Fault Detection - Configuration File
+
+# Project Settings
+project:
+  name: "Solar Panel Fault Detection"
+  version: "1.0.0"
+  author: "ML Engineer"
+  description: "Computer Vision system for detecting solar panel faults"
+
+# Dataset Configuration
+dataset:
+  name: "solar-panel-fault-detection"
+  kaggle_dataset: "awsaf49/solar-panel-fault-detection"
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  train_split: 0.7
+  val_split: 0.15
+  test_split: 0.15
+  random_seed: 42
+  
+# Image Configuration
+image:
+  width: 640
+  height: 640
+  channels: 3
+  format: "jpg"
+
+# Model Configuration
+model:
+  name: "yolov8n"
+  type: "yolo"  # Options: yolo, resnet50
+  num_classes: 4
+  classes:
+    - "normal"
+    - "cracked"
+    - "hotspot"
+    - "dust"
+  pretrained: true
+  
+# Training Configuration
+training:
+  epochs: 35
+  batch_size: 16
+  learning_rate: 0.001
+  weight_decay: 0.0005
+  optimizer: "Adam"
+  scheduler: "ReduceLROnPlateau"
+  patience: 10
+  early_stopping_patience: 15
+  save_best_only: true
+  checkpoint_dir: "models/checkpoints"
+  
+# Data Augmentation
+augmentation:
+  rotation_range: 30
+  brightness_range: [0.8, 1.2]
+  flip_horizontal: true
+  flip_vertical: true
+  zoom_range: [0.9, 1.1]
+  
+# Evaluation Configuration
+evaluation:
+  metrics:
+    - "accuracy"
+    - "precision"
+    - "recall"
+    - "f1_score"
+    - "mAP"
+  iou_threshold: 0.5
+  conf_threshold: 0.25
+  
+# API Configuration
+api:
+  host: "0.0.0.0"
+  port: 8000
+  max_file_size: 10485760  # 10MB
+  allowed_extensions: ["jpg", "jpeg", "png"]
+  
+# Dashboard Configuration
+dashboard:
+  title: "Solar Panel Fault Detection Dashboard"
+  port: 8501
+  
+# Logging
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/app.log"
